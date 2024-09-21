@@ -63,9 +63,7 @@
                    Rp {{ number_format($obat->pembelian_total,0) }}
                 </td>
             </tr>
-            @php
-               $total= $obat->sum('pembelian_total')
-            @endphp
+
         @endforeach
 
         <tr>
@@ -78,7 +76,9 @@
         </tr>
 
 
-
+        @php
+        $total= $value->sum('total')
+        @endphp
 
         @endforeach
 

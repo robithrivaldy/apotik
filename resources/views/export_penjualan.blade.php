@@ -62,10 +62,7 @@
                 </td>
             </tr>
 
-            @php
-            $total= $item->sum('total');
-            // $modal = $item->obat->sum('pembelian_price');
-             @endphp
+
         @endforeach
         <tr>
             <td colspan="6" align="right">SUB TOTAL</td>
@@ -86,6 +83,12 @@
         <tr>
             <td colspan="10"><br></td>
         </tr>
+
+
+        @php
+        $total= $value->sum('total');
+        // $modal = $item->obat->sum('pembelian_price');
+         @endphp
 
         @endforeach
 

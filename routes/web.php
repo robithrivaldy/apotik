@@ -25,9 +25,13 @@ Route::get('/export/obat/expired', function () {
     return view('export_expired');
 })->name('export');;
 
+Route::get('/export/obat/expired', function () {
+    return view('export_expired');
+})->name('export');;
+
 
 Route::get('/print/{id}', function (int $id) {
-    return '<script>window.open("'.env('APP_LINK').'/admin/penjualans");window.close();window.open("'.env('APP_LINK').'/print/penjualan/'.$id.'", "_blank");window.close();</script>';
+    return '<script>window.open("' . env('APP_LINK') . '/admin/penjualans");window.close();window.open("' . env('APP_LINK') . '/print/penjualan/' . $id . '", "_blank");window.close();</script>';
 })->name('print');
 
 

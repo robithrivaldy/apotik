@@ -12,6 +12,7 @@
         "bezhansalleh/filament-shield": "^3.2",
         "charlieuki/receiptprinter": "^1.2",
         "filament/filament": "^3.2",
+        "flowframe/laravel-trend": "^0.2.0",
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
         "laraveldaily/laravel-invoices": "^4.0",

@@ -6,6 +6,7 @@ use App\Filament\Resources\PembelianResource\Pages;
 use App\Filament\Resources\PembelianResource\RelationManagers;
 use App\Models\Obat;
 use App\Models\MasterObat;
+use App\Models\Supplier;
 use App\Models\Pembelian;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -42,6 +43,7 @@ class PembelianResource extends Resource
     public static function form(Form $form): Form
     {
         $products = Obat::get();
+        $supplier = Supplier::get();
         $masterObats = MasterObat::get();
         return $form
             ->columns(3)
@@ -52,10 +54,27 @@ class PembelianResource extends Resource
                             ->columns(2)
                             ->schema([
                                 Forms\Components\Select::make('supplier_id')
-                                    ->relationship(
-                                        name: 'supplier',
-                                        titleAttribute: 'name',
-                                    )->required(),
+                                    ->relationship('supplier', 'name')
+                                    // Options are all products, but we have modified the display to show the price as well
+                                    ->options(
+                                        $supplier->mapWithKeys(function (Supplier $supplier) {
+                                            return [$supplier->id => $supplier->name];
+                                        })
+                                    )
+                                    ->getSearchResultsUsing(function (Builder $builder, string $search) {
+                                        return Supplier::where('name', 'like', "%$search%")
+                                            ->limit(50)
+                                            ->get()
+                                            ->mapWithKeys(function (Supplier $supplier) {
+                                                return [$supplier->id => $supplier->name];
+                                            })
+                                            ->toArray();
+                                    })
+                                    ->searchable()
+                                    ->required()
+                                    ->reactive()
+                                    ->loadingMessage('Loading'),
+
 
                                 Forms\Components\Select::make('jenis_pembelian_id')
                                     ->relationship(
@@ -127,7 +146,7 @@ class PembelianResource extends Resource
                                                     ->filter()
                                                     ->contains($value);
                                             })
-                                            ->afterStateUpdated(function (Get $get, Set $set,) {})
+
                                             ->getSearchResultsUsing(function (string $search): array {
                                                 return MasterObat::query()
                                                     ->where(function (Builder $builder) use ($search) {
@@ -155,58 +174,64 @@ class PembelianResource extends Resource
                                         TextInput::make('no_batch')->required()
                                             ->label('Nomor Batch'),
 
+                                        TextInput::make('margin')
+                                            ->suffix('%')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->required()
+                                            ->live(onBlur: true)
+                                            ->label('Margin Keuntungan'),
+
                                         TextInput::make('pembelian_price')
                                             ->prefix('Rp')
-                                            ->live()
+                                            ->numeric()
                                             ->default(0)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function (Get $get, Set $set, TextInput $component) {
-                                                self::updateTotal($component);
-                                                if ($get('pembelian_price') == "") {
-                                                    return;
-                                                } else {
+
+                                                if ($get('pembelian_price') != "" && $get('pembelian_stock') != "") {
+                                                    // dd("ADA ISINYA");
+
                                                     $set('price', $get('pembelian_price'));
-                                                    $set('stock', $get('pembelian_stock'));
                                                     $set('pembelian_total', $get('pembelian_price') * $get('pembelian_stock'));
+                                                    self::updateTotal($component);
                                                 }
                                             })
                                             ->required(),
 
-                                        Hidden::make('price')->live(),
-                                        TextInput::make('margin')
-                                            ->prefix('Rp')
-                                            ->numeric()
-                                            ->label('Margin Keuntungan'),
-
 
                                         TextInput::make('pembelian_stock')
                                             ->required()
-                                            ->numeric()
                                             ->label('Stock')
                                             ->numeric()
-                                            ->default(1)
-                                            ->live()
+                                            ->default(0)
+                                            // ->live(onBlur:true)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function (Get $get, Set $set, TextInput $component) {
-                                                self::updateTotal($component);
-                                                if ($get('pembelian_stock') == "") {
-                                                    return;
-                                                } else {
+
+                                                if ($get('pembelian_price') != "" && $get('pembelian_stock') != "") {
+
                                                     $set('stock', $get('pembelian_stock'));
                                                     $set('pembelian_total', $get('pembelian_price') * $get('pembelian_stock'));
+                                                    self::updateTotal($component);
                                                 }
-                                            }),
-                                        Hidden::make('stock')->live(),
+                                            })
+                                            ->disabled(fn(Get $get): bool => blank($get('price'))),
 
+                                        Hidden::make('price'),
+                                        Hidden::make('stock'),
 
-
+                                        // TextInput::make('price'),
+                                        // TextInput::make('stock'),
 
                                         TextInput::make('pembelian_total')
                                             ->prefix('Rp')
+                                            ->required()
                                             ->numeric()
-                                            ->live()->readOnly()
+                                            ->mask(RawJs::make('$money($input)'))
+                                            ->stripCharacters(',')
+                                            ->readonly()
                                             ->label('Subtotal'),
-
-
-
 
                                     ])
                                     ->defaultItems(1)
@@ -232,8 +257,14 @@ class PembelianResource extends Resource
 
                                 TextInput::make('total')
                                     ->prefix('Rp')
-                                    ->live()->readOnly()
-                                    ->numeric(),
+                                    ->mask(RawJs::make('$money($input)'))
+                                    ->stripCharacters(',')
+                                    ->readOnly()
+                                    ->numeric()
+                                    ->afterStateHydrated(function (Get $get, Set $set, TextInput $component) {
+                                        self::updateTotal($component);
+                                    }),
+
 
                                 // MoneyInput::make('total')
                                 //     ->required()
@@ -243,6 +274,7 @@ class PembelianResource extends Resource
                                 //     ->label('Total'),
 
                                 Textarea::make('keterangan')
+                                    ->required()
                                     ->label('Keterangan'),
 
 
@@ -260,13 +292,16 @@ class PembelianResource extends Resource
 
         $subtotal = $collect->reduce(function ($subtotal, $obat) {
             // dd($obat);
-            if ($obat['pembelian_price'] == '' || $obat['pembelian_stock'] == '') {
-                return;
-            }
-            return $subtotal + ($obat['pembelian_price'] * $obat['pembelian_stock']);
-        }, 0);
 
-        data_set($livewire, 'data.subtotal', $subtotal);
+            // if ($obat['pembelian_price'] == "" || $obat['pembelian_stock'] == "") {
+            //     dd("ISO");
+            return $subtotal + ($obat['pembelian_price'] * $obat['pembelian_stock']);
+            // }
+
+
+        }, 0);
+        // dd($subtotal);
+        // data_set($livewire, 'data.subtotal', $subtotal);
         data_set($livewire, 'data.total', $subtotal);
     }
     public static function table(Table $table): Table
@@ -280,6 +315,7 @@ class PembelianResource extends Resource
                 Tables\Columns\TextColumn::make('tgl_jatuh_tempo')->dateTime('D, d M Y')->sortable(),
                 Tables\Columns\TextColumn::make('obat_count')->counts('obat'),
                 Tables\Columns\TextColumn::make('total')->money('idr', locale: 'id')->sortable(),
+                Tables\Columns\TextColumn::make('created_at')->dateTime('D, d M Y')->label('Dibuat')->sortable(),
                 Tables\Columns\TextColumn::make('user.name')->sortable()->searchable()->label('Terakhir'),
             ])
             ->filters([
@@ -292,11 +328,11 @@ class PembelianResource extends Resource
                         return $query
                             ->when(
                                 $data['dari'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tgl_faktur', '>=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tgl_faktur', '>=', $date),
                             )
                             ->when(
                                 $data['sampai'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tgl_faktur', '<=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tgl_faktur', '<=', $date),
                             );
                     })
             ])
@@ -331,6 +367,11 @@ class PembelianResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->orderBy('id', 'DESC');
     }
 
     public static function getPages(): array

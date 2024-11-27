@@ -5,6 +5,10 @@ namespace App\Filament\Resources\ObatResource\Pages;
 use App\Filament\Resources\ObatResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use App\Exports\ExpiredExport;
+use Filament\Forms\Components\DatePicker;
+use Illuminate\Mail\TextMessage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ListObats extends ListRecords
 {
@@ -14,6 +18,15 @@ class ListObats extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Actions\Action::make('Export Obat Expired')
+            ->label('Export Obat Expired')
+            ->color('success')
+            ->icon('heroicon-o-printer')
+            ->action(fn($record,array $data) =>   Excel::download(new ExpiredExport($data['dari'],$data['sampai']), 'expired.xlsx'))
+            ->form([
+                DatePicker::make('dari'),
+                DatePicker::make('sampai')
+            ]),
         ];
     }
 }

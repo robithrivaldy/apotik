@@ -24,6 +24,7 @@ class AppPanelProvider extends PanelProvider
     {
         return $panel
              ->sidebarCollapsibleOnDesktop()
+             ->favicon(asset('images/logo.png'))
             ->id('app')
             ->path('app')
             ->colors([

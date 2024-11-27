@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PenjualanResource\Pages;
 
+use App\Filament\Resources\ObatResource;
 use App\Filament\Resources\PenjualanResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -30,10 +31,10 @@ class EditPenjualan extends EditRecord
         ];
     }
 
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
-    }
+    // protected function getRedirectUrl(): string
+    // {
+    //     return ObatResource::getUrl('index');
+    // }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {

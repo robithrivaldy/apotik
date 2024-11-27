@@ -16,6 +16,7 @@ use LaravelDaily\Invoices\Classes\InvoiceItem;
 
 class CreatePenjualan extends CreateRecord
 {
+
     protected static string $resource = PenjualanResource::class;
 
     protected function getCreateFormAction(): Actions\Action
@@ -28,13 +29,16 @@ class CreatePenjualan extends CreateRecord
 
                 $this->closeActionModal();
                 $this->create();
+                // route('print.penjualan.detail', $this->record->id);
             });
     }
 
-    // protected function getRedirectUrl(): string
-    // {
-    //     return static::getResource()::getUrl('pdf');
-    // }
+    protected function getRedirectUrl(): string
+    {
+        // return route('print.penjualan.detail', $this->record->id);
+        return route('print',['id' => $this->record->id]);
+        // return redirect()->route('pdf');
+    }
 
     protected function afterCreate(): void
     {
@@ -46,14 +50,18 @@ class CreatePenjualan extends CreateRecord
 
         $stock = Obat::find($collect->pluck('obat_id'))->pluck('stock', 'id');
 
-
+        redirect('https://stackoverflow.com/');
         $stocks = $collect->reduce(function ($stocks, $product) use ($stock) {
             $stock_akhir = $stock[$product['obat_id']] - $product['qty'];
             Obat::find($product['obat_id'])->update(['stock' => $stock_akhir]);
             return $stocks + 1;
         }, 0);
+
+
+
         // dd($stocks);
     }
+
 
 
     protected function mutateFormDataBeforeCreate(array $data): array

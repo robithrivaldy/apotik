@@ -27,4 +27,7 @@ class EditStockOpname extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+
+
 }

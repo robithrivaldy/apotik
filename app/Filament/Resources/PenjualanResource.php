@@ -79,7 +79,7 @@ class PenjualanResource extends Resource
                                             // Options are all products, but we have modified the display to show the price as well
                                             ->options(
                                                 $obats->mapWithKeys(function (Obat $obat) {
-                                                    return [$obat->id => sprintf("%s\nSTOCK: %s\nNo: %s\nExp %s", $obat->masterObat->name, $obat->stock, $obat->no_batch, date('d M Y', strtotime($obat->tgl_expired)))];
+                                                    return [$obat->id => sprintf("%s\nSTOCK: %s\nNo Batch: %s\nExp %s", $obat->masterObat->name, $obat->stock, $obat->no_batch, date('d M Y', strtotime($obat->tgl_expired)))];
                                                 })
                                             )
                                             // Disable options that are already selected in other rows
@@ -94,20 +94,21 @@ class PenjualanResource extends Resource
                                                     self::updateTotals($get, $set);
                                                     $prices = Obat::find($get('obat_id'));
                                                     // $set('obat.stock', $prices['stock'] - $get('qty'));
-                                                    $set('total', ($prices['price'] + $prices['margin']) * $get('qty'));
-                                                    $set('price', $prices['price'] + $prices['margin']);
+                                                    $set('total', ($prices['price'] + ($prices['price'] * ($prices['margin'] / 100))) * $get('qty'));
+                                                    $set('price', $prices['price'] + ($prices['price'] * ($prices['margin'] / 100)));
                                                 }
                                             })
                                             ->getSearchResultsUsing(function (string $search): array {
                                                 return Obat::whereHas('masterObat', function (Builder $builder) use ($search) {
                                                     $searchString = "%$search%";
                                                     $builder->where('name', 'like', $searchString);
+                                                    $builder->where('stock', '>', 0);
                                                 })
                                                     ->limit(50)
                                                     ->get()
                                                     ->mapWithKeys(function (Obat $obat) {
-                                                        return [$obat->masterObat->id => $obat->masterObat->name . " | STOCK " . $obat->stock . " | No : " . $obat->no_batch];
-                                                    })
+                                                        return [$obat->id => sprintf("%s\nSTOCK: %s\nNo Batch: %s\nExp %s", $obat->masterObat->name, $obat->stock, $obat->no_batch, date('d M Y', strtotime($obat->tgl_expired)))];
+                                                })
                                                     ->toArray();
                                             })
                                             ->searchable()
@@ -120,17 +121,20 @@ class PenjualanResource extends Resource
                                         TextInput::make('qty')
                                             ->required()
                                             ->numeric()
-                                            ->integer()
                                             ->label('Qty')
                                             ->default(1)
-                                            ->live()
+                                            ->live(debounce: 500)
                                             ->afterStateUpdated(function (Get $get, Set $set,) {
-                                                if ($get('qty') != '') {
+                                                if($get('obat_id') == ''){
+                                                    return;
+                                                }
+
+                                                if($get('qty') != '') {
                                                     self::updateTotals($get, $set);
                                                     $prices = Obat::find($get('obat_id'));
                                                     // $set('obat.stock', $prices['stock'] - $get('qty'));
-                                                    $set('total', ($prices['price'] + $prices['margin']) * $get('qty'));
-                                                    $set('price', $prices['price'] + $prices['margin']);
+                                                    $set('total', ($prices['price'] + ($prices['price'] * ($prices['margin'] / 100))) * $get('qty'));
+                                                    $set('price', $prices['price'] + ($prices['price'] * ($prices['margin'] / 100)));
                                                 }
                                             })
                                             ->columnspan(1),
@@ -145,7 +149,6 @@ class PenjualanResource extends Resource
                                             ->prefix('Rp')
                                             ->live()
                                             ->readOnly()
-                                            ->numeric()
                                             ->label('Subtotal')
                                             ->columnspan(2),
 
@@ -173,7 +176,8 @@ class PenjualanResource extends Resource
 
                                 TextInput::make('discount')
                                     ->prefix('Rp')
-                                    ->live()
+                                    ->required()
+                                    ->live(debounce: 500)
                                     ->default(0)
                                     ->numeric()
                                     ->columnspan(1)
@@ -234,7 +238,8 @@ class PenjualanResource extends Resource
         $subtotal = $selectedProducts->reduce(function ($subtotal, $product) use ($prices, $margin) {
             // dd($margin[$product['obat_id']]);
             // dd($product['obat_id']);
-            return $subtotal + (($prices[$product['obat_id']] + $margin[$product['obat_id']]) * $product['qty']);
+
+            return $subtotal + (($prices[$product['obat_id']] +   ($prices[$product['obat_id']] * ($margin[$product['obat_id']]/ 100))) * $product['qty']);
         }, 0);
 
 
@@ -252,14 +257,15 @@ class PenjualanResource extends Resource
     {
         return $table
             ->columns([
-                // Tables\Columns\TextColumn::make('customer')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('id')->sortable()->searchable()->label('ID Penj'),
                 Tables\Columns\TextColumn::make('type')->sortable(),
-                Tables\Columns\TextColumn::make('penjualan_count')->counts('penjualan')->label('Item'),
-                Tables\Columns\TextColumn::make('subtotal')->money('idr', locale: 'id')->sortable(),
-                Tables\Columns\TextColumn::make('discount')->money('idr', locale: 'id')->sortable(),
+                // Tables\Columns\TextColumn::make('penjualan_count')->counts('penjualan')->label('Item'),
+                // Tables\Columns\TextColumn::make('subtotal')->money('idr', locale: 'id')->sortable(),
+                // Tables\Columns\TextColumn::make('discount')->money('idr', locale: 'id')->sortable(),
                 Tables\Columns\TextColumn::make('total')->money('idr', locale: 'id')->sortable(),
+                Tables\Columns\TextColumn::make('created_at')->dateTime('D, d M Y')->sortable()->label('Tanggal'),
                 Tables\Columns\TextColumn::make('user.name')->sortable()->searchable()->label('Terakhir'),
-                Tables\Columns\TextColumn::make('created_at')->dateTime('D, d M Y')->sortable(),
+
             ])
             ->filters([
                 Filter::make('created_at')
@@ -314,7 +320,8 @@ class PenjualanResource extends Resource
             'index' => Pages\ListPenjualans::route('/'),
             'create' => Pages\CreatePenjualan::route('/create'),
             'edit' => Pages\EditPenjualan::route('/{record}/edit'),
-            // 'print' => Pages\ListPenjualan::route('/pdf'),
+            // 'pdf' => Pages\ListObat::route('/obat'),
+            // 'print' => ListPenjualan::route('/pdf'),
         ];
     }
 }

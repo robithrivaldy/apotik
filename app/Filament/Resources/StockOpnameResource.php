@@ -74,7 +74,7 @@ class StockOpnameResource extends Resource
                                             ->limit(50)
                                             ->get()
                                             ->mapWithKeys(function (Obat $obat) {
-                                                return [$obat->masterObat->id => $obat->masterObat->name . " | STOCK " . $obat->stock . " | No : " . $obat->no_batch];
+                                                return [$obat->id => sprintf("%s\nSTOCK: %s\nNo: %s\nExp %s", $obat->masterObat->name, $obat->stock, $obat->no_batch,  date('d M Y', strtotime($obat->tgl_expired)))];
                                             })
                                             ->toArray();
                                     })
@@ -89,6 +89,7 @@ class StockOpnameResource extends Resource
                                     ->numeric()
                                     ->columnspan(1)
                                     ->label('Stock Awal')
+                                    ->readOnly()
                                     ->default(0),
 
                                 TextInput::make('stock_akhir')
@@ -131,6 +132,7 @@ class StockOpnameResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('created_at')->dateTime('D, d M Y')->sortable()->label('Tanggal'),
                 Tables\Columns\TextColumn::make('keterangan')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('obatColumn.masterObat.name')->sortable()->searchable()->label('Nama Obat'),
                 Tables\Columns\TextColumn::make('stock_awal')->sortable()->searchable()->label('Stock Awal'),

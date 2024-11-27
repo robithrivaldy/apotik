@@ -16,11 +16,11 @@ class PembelianExport implements FromView
 
     public function view(): View
     {
-        $data = Pembelian::with('obat')->whereBetween('tgl_faktur',[$this->dari,$this->sampai])->get();
+        $data = Pembelian::with('obat')->whereBetween('tgl_jatuh_tempo',[$this->dari,$this->sampai])->get();
         $apotik = Setting::find(1);
         $dari = $this->dari;
         $sampai = $this->sampai;
-
+        // dd($dari);
         // $total = $data->obat->sum('pembelian_total');
 
         // dd($total);

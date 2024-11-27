@@ -251,7 +251,7 @@
 
     function myFunction() {
         // data = document.getElementsById("main").innerHtml;
-        my = window.open("http://127.0.0.1:8000/cetak", "_blank",
+        my = window.open("{{env('APP_LINK')}}/cetak", "_blank",
             "toolbar=yes, scrollbars=yes, resizable=yes, top=500, left=500, width=400, height=400");
         // my.document.write(data);
         // my.document.title = "JUDUL COY";

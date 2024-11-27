@@ -14,6 +14,11 @@ class PenjualanItem extends Model
     {
         return $this->hasOne(Obat::class, 'id', 'obat_id');
     }
+    public function obats()
+    {
+        return $this->belongsTo(Obat::class, 'id', 'obat_id');
+    }
+
 
     public function Penjualan()
     {

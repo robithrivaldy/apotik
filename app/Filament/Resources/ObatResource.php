@@ -103,7 +103,7 @@ class ObatResource extends Resource
 
 
                         TextInput::make('margin')
-                            ->prefix('Rp')
+                            ->suffix('%')
                             ->required()
                             ->label('Margin Keuntungan'),
                     ])
@@ -115,16 +115,20 @@ class ObatResource extends Resource
         // ->defaultSort('name');
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('no_batch')->sortable()->searchable()->label('No Batch'),
                 Tables\Columns\TextColumn::make('masterObat.name')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('price')->money('idr', locale: 'id')->sortable(),
                 Tables\Columns\TextColumn::make('stock')->sortable(),
-                Tables\Columns\TextColumn::make('margin')->money('idr', locale: 'id')->sortable(),
+                Tables\Columns\TextColumn::make('margin')->suffix('%')->sortable(),
                 Tables\Columns\TextColumn::make('masterObat.satuan.name')->sortable(),
                 Tables\Columns\TextColumn::make('masterObat.sediaan.name')->sortable(),
                 Tables\Columns\TextColumn::make('masterObat.pt.name')->sortable(),
+                Tables\Columns\TextColumn::make('tgl_expired')->dateTime('D, d M Y')->sortable(),
                 Tables\Columns\TextColumn::make('user.name')->sortable()->label('Terakhir'),
             ])
             ->filters([
+
+
                 Filter::make('stock')
                     ->form([
                         Select::make('stock')
@@ -145,6 +149,7 @@ class ObatResource extends Resource
                                     if($val == "TERSEDIA"){
                                        return $query->where('stock', '>', 0);
                                     }
+
 
                                     if($val == "KOSONG"){
                                       return $query->where('stock', '<', 1);

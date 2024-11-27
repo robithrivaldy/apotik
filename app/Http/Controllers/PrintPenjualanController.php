@@ -22,8 +22,18 @@ class PrintPenjualanController extends Controller
         $data_penjualan = Penjualan::find($id);
         $data_apotik = Setting::find(1);
 
+        $c_item = count($data_penjualan_item);
 
-        $pdf = PDF::loadView('nota_thermal', compact('data_penjualan_item', 'data_penjualan', 'data_apotik'));
+        // dd($c_item);
+        if($c_item < 5 ){
+            $docHeight = 200 + ($c_item * 100);
+        }else{
+            $docHeight =  ($c_item * 100) + 100;
+        }
+
+
+
+        $pdf = PDF::loadView('nota_thermal', compact('data_penjualan_item', 'data_penjualan', 'data_apotik'))->setPaper([0,0,250, $docHeight]);
         $pdf->render();
 
         return $pdf->stream('laporan.pdf');

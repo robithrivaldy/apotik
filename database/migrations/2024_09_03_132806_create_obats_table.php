@@ -21,7 +21,7 @@ return new class extends Migration
                 ->constrained()
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-            $table->integer('no_batch')->nullable();
+            $table->string('no_batch')->nullable();
             $table->integer('price')->default(0);
             $table->integer('stock')->default(0);
             $table->integer('margin')->default(0);

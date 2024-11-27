@@ -6,16 +6,18 @@
     <title>Invoice</title>
     <style type="text/css">
         body {
-
-            margin: 0;
-            font-size: 24px;
-            line-height: 30px;
+            margin: -10%;
+            font-size: 18px;
+            line-height: 24px;
 
         }
-
+        table{
+            width:100%;
+        }
         i {
             font-size: 20px;
         }
+
     </style>
     <script script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     {{-- <script>
